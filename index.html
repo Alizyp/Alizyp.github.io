@@ -170,6 +170,223 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-Java和操作系统是如何交互的？" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2020/01/14/Java%E5%92%8C%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%A6%82%E4%BD%95%E4%BA%A4%E4%BA%92%E7%9A%84%EF%BC%9F/">Java和操作系统是如何交互的？</a>
+    </h1>
+  
+
+        
+        <a href="/2020/01/14/Java%E5%92%8C%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%A6%82%E4%BD%95%E4%BA%A4%E4%BA%92%E7%9A%84%EF%BC%9F/" class="archive-article-date">
+  	<time datetime="2020-01-14T14:03:02.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2020-01-14</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+
+	
+		<p>肉眼看计算机是由 CPU 、内存、显示器这些硬件设备组成，但大部分人从事的是软件开发工作。计算机底层原理就是连通硬件和软件的桥梁，理解计算机底层原理才能在程序设计这条路上越走越快，越走越轻松。通过从操作系统层面去理解高级编程语言的执行过程，会发现好多软件设计都是同一种套路，很多语言特性都依赖于底层机制<br><strong>结合 CPU 理解一行 Java 代码是怎么执行的</strong><br><img src="https://img-blog.csdnimg.cn/2020051420520926.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyMDcwNjI0,size_16,color_FFFFFF,t_70" alt="计算机底层实现">图片来源：<br><a href="http://m.elecfans.com/article/625138.html" target="_blank" rel="noopener">http://m.elecfans.com/article/625138.html</a><br>CPU 的工作原理：现代 CPU 芯片中大都集成了，控制单元，运算单元，存储单元。控制单元是 CPU 的控制中心， CPU 需要通过它才知道下一步做什么，也就是执行什么指令，控制单元又包含：指令寄存器（IR ），指令译码器（ ID ）和操作控制器（ OC ）。</p>
+<p>当程序被加载进内存后，指令就在内存中了，这个时候说的内存是独立于 CPU 外的主存设备，也就是 PC 机中的内存条，指令指针寄存器IP 指向内存中下一条待执行指令的地址，控制单元根据 IP寄存器的指向，将主存中的指令装载到指令寄存器。</p>
+<p>这个指令寄存器也是一个存储设备，不过他集成在 CPU 内部，指令从主存到达 CPU 后只是一串 010101 的二进制串，还需要通过译码器解码，分析出操作码是什么，操作数在哪，之后就是具体的运算单元进行算术运算（加减乘除），逻辑运算（比较，位移）。而 CPU 指令执行过程大致为：<strong>取址（去主存获取指令放到寄存器），译码（从主存获取操作数放入高速缓存 L1 ），执行（运算）。</strong><br><img src="https://img-blog.csdnimg.cn/20200514205852850.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyMDcwNjI0,size_16,color_FFFFFF,t_70" alt="cpu与主存交互过程">这里解释下上图中 CPU 内部集成的存储单元 SRAM [计算机组成原理基础知识]，正好和主存中的 DRAM 对应， RAM 是随机访问内存，就是给一个地址就能访问到数据，而磁盘这种存储媒介必须顺序访问，而 RAM 又分为动态和静态两种，静态 RAM 由于集成度较低，一般容量小，速度快，而动态 RAM 集成度较高，主要通过给电容充电和放电实现，速度没有静态 RAM 快，所以一般将动态 RAM 做为主存，而静态 RAM 作为 CPU 和主存之间的高速缓存 （cache），用来屏蔽 CPU 和主存速度上的差异，也就是我们经常看到的 L1 ， L2 缓存。每一级别缓存速度变低，容量变大。</p>
+<p>下图展示了存储器的层次化架构，以及 CPU 访问主存的过程，这里有两个知识点，一个是多级缓存之间为保证数据的一致性，而推出的缓存一致性协议，具体可以参考这篇文章，另外一个知识点是， cache 和主存的映射，首先要明确的是 cahce 缓存的单位是缓存行，对应主存中的一个内存块，并不是一个变量，这个主要是因为  CPU 访问的空间局限性：<strong>被访问的某个存储单元，在一个较短时间内，很有可能再次被访问到，以及空间局限性：被访问的某个存储单元，在较短时间内，他的相邻存储单元也会被访问到</strong>。</p>
+<p>而映射方式有很多种，类似于 <strong>cache 行号 = 主存块号 mod cache总行数</strong> ，这样每次获取到一个主存地址，根据这个地址计算出在主存中的块号就可以计算出在 cache 中的行号。<br><img src="https://img-blog.csdnimg.cn/20200514210605204.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyMDcwNjI0,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"><br>下面我们接着聊 CPU 的指令执行。取址、译码、执行，这是一个指令的执行过程，所有指令都会严格按照这个顺序执行。但是多个指令之间其实是可以并行的，对于单核 CPU 来说，同一时刻只能有一条指令能够占有执行单元运行。这里说的执行是 CPU 指令处理 （取指，译码，执行） 三步骤中的第三步，也就是运算单元的计算任务。</p>
+<p>所以为了提升 CPU 的指令处理速度，所以需要保证运算单元在执行前的准备工作都完成，这样运算单元就可以一直处于运算中，而刚刚的串行流程中，取指，解码的时候运算单元是空闲的，而且取指和解码如果没有命中高速缓存还需要从主存取，而主存的速度和 CPU 不在一个级别上，所以指令流水线 可以大大提高 CPU 的处理速度，下图是一个3级流水线的示例图，而现在的奔腾 CPU 都是32级流水线，具体做法就是将上面三个流程拆分的更细。<br><img src="https://img-blog.csdnimg.cn/20200514210630529.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyMDcwNjI0,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述">除了指令流水线， CPU 还有分支预测，乱序执行等优化速度的手段。好了，我们回到正题，<strong>一行 Java 代码是怎么执行的？</strong><br>一行代码能够执行，必须要有可以执行的上下文环境，包括：指令寄存器、数据寄存器、栈空间等内存资源，然后这行代码必须作为一个执行流能够被操作系统的任务调度器识别，并给他分配 CPU 资源，当然这行代码所代表的指令必须是 CPU 可以解码识别的，所以一行 Java 代码必须被解释成对应的 CPU 指令才能执行。下面我们看下System.out.println(“Hello world”)这行代码的转译过程。</p>
+<p>Java 是一门高级语言，这类语言不能直接运行在硬件上，必须运行在能够识别 Java 语言特性的虚拟机上，而 Java 代码必须通过 Java 编译器将其转换成虚拟机所能识别的指令序列，也称为 Java 字节码，之所以称为字节码是因为 Java 字节码的操作指令（OpCode）被固定为一个字节，以下为 </p>
+<table>
+<thead>
+<tr>
+<th>偏移</th>
+<th>字节码</th>
+<th>高级语言</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0x00:</td>
+<td>b2 00 02</td>
+<td>getstatic  Java .lang.System.out</td>
+</tr>
+<tr>
+<td>0x03:</td>
+<td>12 03</td>
+<td>ldc “Hello， World!”</td>
+</tr>
+<tr>
+<td>0x05:</td>
+<td>b6 00 04</td>
+<td>invokevirtual  Java .io.PrintStream.println</td>
+</tr>
+<tr>
+<td>0x08:</td>
+<td>b1</td>
+<td>return</td>
+</tr>
+</tbody></table>
+<p>最左列是偏移；中间列是给虚拟机读的字节码；最右列是高级语言的代码，下面是通过汇编语言转换成的机器指令，中间是机器码，第三列为对应的机器指令，最后一列是对应的汇编代码：</p>
+<table>
+<thead>
+<tr>
+<th>偏移</th>
+<th>机器码</th>
+<th>机器指令</th>
+<th>汇编代码</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0x00:</td>
+<td>55</td>
+<td>push</td>
+<td>rbp</td>
+</tr>
+<tr>
+<td>0x01:</td>
+<td>48 89 e5</td>
+<td>mov</td>
+<td>rbp，rsp</td>
+</tr>
+<tr>
+<td>0x04:</td>
+<td>48 83 ec 10</td>
+<td>sub</td>
+<td>rsp，0x10</td>
+</tr>
+<tr>
+<td>0x08:</td>
+<td>48 8d 3d 3b 00 00 00</td>
+<td>lea</td>
+<td>rdi，[rip+0x3b] ; 加载 “Hello， World!\n”</td>
+</tr>
+<tr>
+<td>0x0f:</td>
+<td>c7 45 fc 00 00 00 00</td>
+<td>mov</td>
+<td>DWORD PTR [rbp-0x4]，0x0</td>
+</tr>
+<tr>
+<td>0x16:</td>
+<td>b0 00</td>
+<td>mov</td>
+<td>al，0x0</td>
+</tr>
+<tr>
+<td>0x18:</td>
+<td>e8 0d 00 00 00</td>
+<td>call</td>
+<td>0x12 ; 调用 printf 方法</td>
+</tr>
+<tr>
+<td>0x1d:</td>
+<td>31 c9</td>
+<td>xor</td>
+<td>ecx，ecx</td>
+</tr>
+<tr>
+<td>0x1f:</td>
+<td>89 45 f8</td>
+<td>mov</td>
+<td>DWORD PTR [rbp-0x8]，eax</td>
+</tr>
+<tr>
+<td>0x22:</td>
+<td>89 c8</td>
+<td>mov</td>
+<td>eax，ecx</td>
+</tr>
+<tr>
+<td>0x24:</td>
+<td>48 83 c4 10</td>
+<td>add</td>
+<td>rsp，0x10</td>
+</tr>
+<tr>
+<td>0x28:</td>
+<td>5d</td>
+<td>pop</td>
+<td>rbp</td>
+</tr>
+<tr>
+<td>0x29:</td>
+<td>c3</td>
+<td>ret</td>
+<td></td>
+</tr>
+</tbody></table>
+<p>JVM 通过类加载器加载 class 文件里的字节码后，会通过<strong>解释器解释成汇编指令，最终再转译成 CPU 可以识别的机器指令</strong>，解释器是软件来实现的，主要是为了实现同一份 Java 字节码可以在不同的硬件平台上运行，而将汇编指令转换成机器指令由硬件直接实现，这一步速度是很快的，当然 JVM 为了提高运行效率也可以将某些<strong>热点代码（一个方法内的代码）一次全部编译成机器指令后然后在执行，也就是和解释执行对应的即时编译</strong>（JIT）， JVM 启动的时候可以通过 -Xint 和 -Xcomp 来控制执行模式。</p>
+<p>从软件层面上， class 文件被加载进虚拟机后，类信息会存放在方法区，在实际运行的时候会执行方法区中的代码，在 JVM 中所有的线程共享堆内存和方法区，而每个线程有自己独立的 Java 方法栈，本地方法栈（面向 native 方法），PC寄存器（存放线程执行位置），当调用一个方法的时候， Java 虚拟机会在当前线程对应的方法栈中压入一个栈帧，用来存放 Java 字节码操作数以及局部变量，这个方法执行完会弹出栈帧，一个线程会连续执行多个方法，对应不同的栈帧的压入和弹出，压入栈帧后就是 JVM 解释执行的过程了。<img src="https://img-blog.csdnimg.cn/2020051421481761.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyMDcwNjI0,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"><strong>中断</strong></p>
+<p>刚刚说到， CPU 只要一上电就像一个永动机， 不停的取指令，运算，周而复始，而中断便是操作系统的灵魂，故名思议，中断就是打断 CPU 的执行过程，转而去做点别的。</p>
+<p>例如系统执行期间发生了致命错误，需要结束执行，例如用户程序调用了一个系统调用的方法，例如mmp等，就会通过中断让 CPU 切换上下文，转到内核空间，例如一个等待用户输入的程序正在阻塞，而当用户通过键盘完成输入，内核数据已经准备好后，就会发一个中断信号，唤醒用户程序把数据从内核取走，不然内核可能会数据溢出，当磁盘报了一个致命异常，也会通过中断通知 CPU ，定时器完成时钟滴答也会发时钟中断通知 CPU 。</p>
+<p>中断的种类，我们这里就不做细分了，中断有点类似于我们经常说的事件驱动编程，而这个事件通知机制是怎么实现的呢，硬件中断的实现通过一个导线和 CPU 相连来传输中断信号，软件上会有特定的指令，例如执行系统调用创建线程的指令，而 CPU 每执行完一个指令，就会检查中断寄存器中是否有中断，如果有就取出然后执行该中断对应的处理程序。</p>
+<p>陷入内核 : 我们在设计软件的时候，会考虑程序上下文切换的频率，频率太高肯定会影响程序执行性能，而陷入内核是针对 CPU 而言的， CPU 的执行从用户态转向内核态，以前是用户程序在使用 CPU ，现在是内核程序在使用 CPU ，这种切换是通过系统调用产生的。</p>
+<p>系统调用是执行操作系统底层的程序，Linux的设计者，为了保护操作系统，将进程的执行状态用内核态和用户态分开，同一个进程中，内核和用户共享同一个地址空间，一般 4G 的虚拟地址，其中 1G 给内核态， 3G 给用户态。在程序设计的时候我们要尽量减少用户态到内核态的切换，例如创建线程是一个系统调用，所以我们有了线程池的实现。</p>
+
+	
+
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">-操作系统 -JVM</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+		<i class="icon-book icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="/categories/Java//" class="article-tag-list-link color5">Java</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2020/01/14/Java%E5%92%8C%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%98%AF%E5%A6%82%E4%BD%95%E4%BA%A4%E4%BA%92%E7%9A%84%EF%BC%9F/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-markdown编辑器使用" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -582,6 +799,10 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color5">-Hexo -工具</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color1">-操作系统 -JVM</a>
               </li>
             
             <div class="clearfix"></div>
